@@ -1,8 +1,7 @@
 class LobbyManager {
     constructor() {
         // Configuración - CAMBIAR DESPUÉS DEL DEPLOY
-        this.SERVER_URL = 'http://localhost:3000';
-        
+this.SERVER_URL = 'https://tu-servidor.onrender.com';        
         this.socket = io(this.SERVER_URL);
         this.playerName = '';
         

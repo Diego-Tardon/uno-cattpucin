@@ -1,7 +1,6 @@
 class RoomManager {
     constructor() {
-        this.SERVER_URL = 'http://localhost:3000';
-        
+this.SERVER_URL = 'https://tu-servidor.onrender.com';        
         // Obtener datos de sessionStorage
         this.playerId = sessionStorage.getItem('playerId');
         this.playerName = sessionStorage.getItem('playerName');
