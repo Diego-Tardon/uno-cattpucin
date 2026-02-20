@@ -9,8 +9,13 @@
 </head>
 <body>
     <div class="game-container">
-        <!-- Barra de estado superior -->
+        <!-- Barra de estado con CÓDIGO DE SALA visible -->
         <div class="status-bar">
+            <div class="room-code-display">
+                <span class="room-label">SALA:</span>
+                <span class="room-code" id="gameRoomCode">123456</span>
+                <button class="copy-code-btn" id="copyGameCodeBtn">📋</button>
+            </div>
             <div class="turn-indicator" id="turnDisplay">
                 <span class="dot"></span> tu turno
             </div>
@@ -42,7 +47,7 @@
         </div>
 
         <!-- Mensaje de estado -->
-        <div class="message-area" id="globalMessage">· esperando turno ·</div>
+        <div class="message-area" id="globalMessage">· esperando jugadores ·</div>
         
         <!-- Botón para salir -->
         <button class="leave-button" id="leaveGameBtn">🚪 SALIR</button>

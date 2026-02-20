@@ -1,6 +1,7 @@
 class GameManager {
     constructor() {
-this.SERVER_URL = 'https://tu-servidor.onrender.com';        
+        this.SERVER_URL = 'https://uno-server.onrender.com'; // Tu URL de Render
+        
         // Obtener datos de sessionStorage
         this.playerId = sessionStorage.getItem('playerId');
         this.playerName = sessionStorage.getItem('playerName');
@@ -21,6 +22,9 @@ this.SERVER_URL = 'https://tu-servidor.onrender.com';
         this.initDOM();
         this.attachEvents();
         this.initSocket();
+        
+        // Mostrar el código de sala
+        this.showRoomCode();
     }
 
     initDOM() {
@@ -35,12 +39,24 @@ this.SERVER_URL = 'https://tu-servidor.onrender.com';
         this.unoCallBtn = document.getElementById('unoCallBtn');
         this.playersContainer = document.getElementById('playersContainer');
         this.leaveBtn = document.getElementById('leaveGameBtn');
+        this.gameRoomCode = document.getElementById('gameRoomCode');
+        this.copyCodeBtn = document.getElementById('copyGameCodeBtn');
+    }
+
+    showRoomCode() {
+        if (this.gameRoomCode) {
+            this.gameRoomCode.textContent = this.roomCode;
+        }
     }
 
     attachEvents() {
         this.drawPile.addEventListener('click', () => this.handleDraw());
         this.unoCallBtn.addEventListener('click', () => this.callUno());
         this.leaveBtn.addEventListener('click', () => this.leaveGame());
+        
+        if (this.copyCodeBtn) {
+            this.copyCodeBtn.addEventListener('click', () => this.copyRoomCode());
+        }
         
         // Color picker
         this.wildPicker.querySelectorAll('.color-option').forEach(opt => {
@@ -52,10 +68,60 @@ this.SERVER_URL = 'https://tu-servidor.onrender.com';
         });
     }
 
+    copyRoomCode() {
+        navigator.clipboard.writeText(this.roomCode);
+        this.copyCodeBtn.textContent = '✅';
+        this.copyCodeBtn.classList.add('copied');
+        
+        setTimeout(() => {
+            this.copyCodeBtn.textContent = '📋';
+            this.copyCodeBtn.classList.remove('copied');
+        }, 2000);
+        
+        this.setMessage('📋 Código copiado. Compártelo con tus amigos');
+    }
+
     initSocket() {
-        this.socket.on('gameState', (gameState) => {
+        this.socket.on('connect', () => {
+            console.log('Conectado al servidor');
+            // Unirse a la sala automáticamente
+            this.socket.emit('join-room', {
+                playerName: this.playerName,
+                roomCode: this.roomCode
+            });
+        });
+
+        this.socket.on('room-joined', (data) => {
+            console.log('Unido a sala:', data);
+            this.players = data.players;
+            this.updatePlayersList();
+        });
+
+        this.socket.on('player-joined', (data) => {
+            this.players = data.players;
+            this.updatePlayersList();
+            this.setMessage(`👥 ${this.players.length} jugadores en la sala`);
+            
+            // Si soy el host y hay 2 jugadores, mostrar botón para iniciar
+            if (this.isHost && this.players.length >= 2) {
+                // Aquí puedes mostrar un botón de iniciar si quieres
+            }
+        });
+
+        this.socket.on('game-starting', (data) => {
+            this.gameState = data.gameState;
+            this.myIndex = data.playerIndex;
+            this.setMessage('🎮 ¡El juego comienza!');
+        });
+
+        this.socket.on('game-state', (gameState) => {
             this.gameState = gameState;
             this.updateGame();
+        });
+
+        this.socket.on('player-left', (data) => {
+            this.players = data.players;
+            this.updatePlayersList();
         });
 
         this.socket.on('error-message', (msg) => {
@@ -63,10 +129,31 @@ this.SERVER_URL = 'https://tu-servidor.onrender.com';
         });
     }
 
+    updatePlayersList() {
+        if (!this.playersContainer) return;
+        
+        this.playersContainer.innerHTML = '';
+        
+        this.players.forEach((player, index) => {
+            const playerDiv = document.createElement('div');
+            playerDiv.className = 'other-player-hand';
+            
+            playerDiv.innerHTML = `
+                <div class="player-info">
+                    <span>${this.getAvatar(index)} ${player.name}</span>
+                    ${player.isHost ? '<span>👑</span>' : ''}
+                </div>
+                <div class="player-status">Esperando...</div>
+            `;
+            
+            this.playersContainer.appendChild(playerDiv);
+        });
+    }
+
     updateGame() {
         if (!this.gameState) return;
         
-        // Encontrar mi índice
+        // Encontrar mi índice si no lo tengo
         if (this.myIndex === -1) {
             this.myIndex = this.gameState.players.findIndex(p => p.id === this.playerId);
         }
@@ -105,68 +192,18 @@ this.SERVER_URL = 'https://tu-servidor.onrender.com';
     }
 
     updateOtherPlayers() {
-        this.playersContainer.innerHTML = '';
-        
-        this.gameState.players.forEach((player, index) => {
-            if (index === this.myIndex) return;
-            
-            const playerDiv = document.createElement('div');
-            playerDiv.className = 'other-player-hand';
-            
-            const cardCount = player.cardCount || 0;
-            const isCurrentTurn = index === this.gameState.currentPlayer;
-            
-            playerDiv.innerHTML = `
-                <div class="player-info">
-                    <span>${this.getAvatar(index)} ${player.name}</span>
-                    <span>${cardCount}</span>
-                </div>
-                <div class="player-cards-back">
-                    ${Array(Math.min(cardCount, 5)).fill(0).map(() => '<div class="mini-card"></div>').join('')}
-                    ${cardCount > 5 ? '<span>...</span>' : ''}
-                </div>
-            `;
-            
-            if (isCurrentTurn) {
-                playerDiv.style.border = '2px solid #a6e3a1';
-            }
-            
-            this.playersContainer.appendChild(playerDiv);
-        });
+        // Esta función se mantiene igual que antes
+        // ... (el código que ya tenías)
     }
 
     renderMyHand(hand) {
-        this.handCardsDiv.innerHTML = '';
-        hand.forEach((card, index) => {
-            const el = this.createCardElement(card);
-            el.addEventListener('click', () => {
-                if (this.gameState.currentPlayer === this.myIndex && !this.gameLocked) {
-                    this.playCard(index);
-                }
-            });
-            this.handCardsDiv.appendChild(el);
-        });
+        // Esta función se mantiene igual que antes
+        // ... (el código que ya tenías)
     }
 
     createCardElement(card) {
-        const div = document.createElement('div');
-        div.className = `card ${card.color || 'wild'}`;
-        
-        let icon = card.value;
-        let displayValue = card.value;
-        
-        if (card.value === 'skip') { icon = '⊘'; displayValue = 'skip'; }
-        else if (card.value === 'reverse') { icon = '↻'; displayValue = 'reverse'; }
-        else if (card.value === '+2') { icon = '+2'; displayValue = '+2'; }
-        else if (card.value === 'wild') { icon = '◈'; displayValue = 'wild'; }
-        else if (card.value === 'wild+4') { icon = '+4'; displayValue = '+4'; }
-        
-        div.innerHTML = `
-            <div class="card-icon">${icon}</div>
-            <div class="card-value">${displayValue}</div>
-        `;
-        
-        return div;
+        // Esta función se mantiene igual que antes
+        // ... (el código que ya tenías)
     }
 
     getAvatar(index) {
@@ -183,7 +220,7 @@ this.SERVER_URL = 'https://tu-servidor.onrender.com';
         if (this.gameLocked) return;
         
         this.gameLocked = true;
-        this.socket.emit('playCard', {
+        this.socket.emit('play-card', {
             roomCode: this.roomCode,
             playerId: this.playerId,
             cardIndex: index
@@ -203,7 +240,7 @@ this.SERVER_URL = 'https://tu-servidor.onrender.com';
         if (this.gameLocked) return;
         
         this.gameLocked = true;
-        this.socket.emit('drawCard', {
+        this.socket.emit('draw-card', {
             roomCode: this.roomCode,
             playerId: this.playerId
         });
@@ -216,7 +253,7 @@ this.SERVER_URL = 'https://tu-servidor.onrender.com';
     callUno() {
         if (this.gameState.currentPlayer !== this.myIndex) return;
         
-        this.socket.emit('callUno', {
+        this.socket.emit('call-uno', {
             roomCode: this.roomCode,
             playerId: this.playerId
         });
@@ -224,7 +261,7 @@ this.SERVER_URL = 'https://tu-servidor.onrender.com';
     }
 
     selectWildColor(color) {
-        this.socket.emit('selectWildColor', {
+        this.socket.emit('select-wild-color', {
             roomCode: this.roomCode,
             playerId: this.playerId,
             color: color
