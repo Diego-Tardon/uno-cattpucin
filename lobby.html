@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UNO · Lobby</title>
+    <link rel="stylesheet" href="css/lobby.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="lobby-container">
+        <div class="lobby-header">
+            <h1>☕ CATTPUCIN UNO 🐱</h1>
+            <p>Juega con hasta 8 amigos</p>
+        </div>
+
+        <div class="lobby-grid">
+            <!-- Tarjeta CREAR SALA -->
+            <div class="lobby-card">
+                <div class="card-icon">➕</div>
+                <h2>Crear sala</h2>
+                <p>Serás el anfitrión</p>
+                
+                <div class="input-group">
+                    <label>Tu nombre:</label>
+                    <input type="text" id="creatorName" placeholder="Ej: Ana" maxlength="20" value="Anfitrión">
+                </div>
+                
+                <div class="input-group">
+                    <label>Contraseña (6 dígitos):</label>
+                    <input type="text" id="roomPassword" placeholder="123456" maxlength="6" pattern="[0-9]{6}">
+                </div>
+                
+                <button class="btn-primary" id="createRoomBtn">CREAR SALA</button>
+            </div>
+
+            <!-- Tarjeta UNIRSE A SALA -->
+            <div class="lobby-card">
+                <div class="card-icon">🔑</div>
+                <h2>Unirse a sala</h2>
+                <p>Ingresa el código</p>
+                
+                <div class="input-group">
+                    <label>Tu nombre:</label>
+                    <input type="text" id="joinerName" placeholder="Ej: Carlos" maxlength="20" value="Jugador">
+                </div>
+                
+                <div class="input-group">
+                    <label>Código (6 dígitos):</label>
+                    <input type="text" id="roomCodeInput" placeholder="123456" maxlength="6" pattern="[0-9]{6}">
+                </div>
+                
+                <button class="btn-primary" id="joinRoomBtn">UNIRSE</button>
+            </div>
+        </div>
+
+        <div class="lobby-footer">
+            <p>✨ Crea una sala y comparte el código de 6 dígitos con tus amigos</p>
+        </div>
+    </div>
+
+    <div id="messageToast" class="toast"></div>
+    
+    <script src="js/lobby.js"></script>
+</body>
+</html>

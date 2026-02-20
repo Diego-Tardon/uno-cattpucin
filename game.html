@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UNO · Partida</title>
+    <link rel="stylesheet" href="css/game.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="game-container">
+        <!-- Barra de estado superior -->
+        <div class="status-bar">
+            <div class="turn-indicator" id="turnDisplay">
+                <span class="dot"></span> tu turno
+            </div>
+            <div class="scores" id="scoreDisplay">0 : 0</div>
+        </div>
+
+        <!-- Contenedor de otros jugadores -->
+        <div class="players-container" id="playersContainer"></div>
+
+        <!-- Mazo y descarte -->
+        <div class="pile-center">
+            <div class="draw-pile" id="drawPile">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <rect x="2" y="2" width="20" height="20" rx="2" />
+                    <path d="M8 2v20M16 2v20M2 8h20M2 16h20" />
+                </svg>
+            </div>
+            <div class="discard-pile" id="discardPile"></div>
+        </div>
+
+        <!-- Mano del jugador actual -->
+        <div class="current-player-hand">
+            <div class="hand-header">
+                <span>TU MANO</span>
+                <span class="card-count" id="handCount">7</span>
+                <button class="uno-button" id="unoCallBtn">UNO</button>
+            </div>
+            <div class="player-cards" id="handCards"></div>
+        </div>
+
+        <!-- Mensaje de estado -->
+        <div class="message-area" id="globalMessage">· esperando turno ·</div>
+        
+        <!-- Botón para salir -->
+        <button class="leave-button" id="leaveGameBtn">🚪 SALIR</button>
+    </div>
+
+    <!-- Selector de color (oculto por defecto) -->
+    <div id="wildColorPicker" style="display: none;" class="color-picker">
+        <div class="color-option" style="background:#f38ba8;" data-color="red"></div>
+        <div class="color-option" style="background:#89b4fa;" data-color="blue"></div>
+        <div class="color-option" style="background:#a6e3a1;" data-color="green"></div>
+        <div class="color-option" style="background:#f9e2af;" data-color="yellow"></div>
+    </div>
+
+    <div id="cardAnimationContainer"></div>
+
+    <script src="js/game.js"></script>
+</body>
+</html>

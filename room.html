@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UNO · Sala de Espera</title>
+    <link rel="stylesheet" href="css/room.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="room-container">
+        <!-- Header con código de sala -->
+        <div class="room-header">
+            <div class="room-info">
+                <span class="room-label">CÓDIGO:</span>
+                <span class="room-code" id="roomCodeDisplay">123456</span>
+            </div>
+            <button class="btn-copy" id="copyInviteBtn">📋 COPIAR CÓDIGO</button>
+        </div>
+
+        <!-- Grid de jugadores (8 slots) -->
+        <div class="players-grid" id="playersGrid"></div>
+
+        <!-- Controles de sala -->
+        <div class="room-controls">
+            <div class="player-status" id="playerStatus">👥 0/8 jugadores</div>
+            
+            <div class="room-actions">
+                <button class="btn-primary" id="startGameBtn" style="display: none;">▶️ INICIAR JUEGO</button>
+                <button class="btn-secondary" id="leaveRoomBtn">🚪 SALIR DE LA SALA</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="messageToast" class="toast"></div>
+
+    <script src="js/room.js"></script>
+</body>
+</html>
