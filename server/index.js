@@ -17,7 +17,7 @@ const io = new Server(server, {
     }
 });
 
-// ===== RUTA PRINCIPAL PARA VERIFICAR QUE EL SERVIDOR FUNCIONA =====
+// ===== RUTAS HTTP =====
 app.get('/', (req, res) => {
     res.json({ 
         status: 'online', 
@@ -29,61 +29,70 @@ app.get('/', (req, res) => {
     });
 });
 
-// ===== RUTA DE SALUD =====
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', rooms: rooms.size });
-});
-
-// ===== ENDPOINT PARA VER SALAS ACTIVAS =====
-app.get('/api/rooms', (req, res) => {
-    const activeRooms = [];
-    rooms.forEach((room, code) => {
-        activeRooms.push({
-            code,
-            players: room.players.length,
-            maxPlayers: room.maxPlayers,
-            gameStarted: room.gameStarted
-        });
-    });
-    res.json(activeRooms);
 });
 
 // ===== GESTIÓN DE SALAS =====
 const rooms = new Map();
 
 io.on('connection', (socket) => {
-    console.log(`🟢 Jugador conectado: ${socket.id}`);
+    console.log(`🟢 Nuevo cliente conectado: ${socket.id}`);
 
     // ===== CREAR SALA =====
-    socket.on('create-room', ({ playerName, roomCode, maxPlayers = 8 }) => {
-        console.log(`📝 Creando sala: ${roomCode} por ${playerName}`);
+    socket.on('create-room', (data) => {
+        console.log('📝 Evento create-room recibido:', data);
         
+        const { playerName, roomCode, maxPlayers = 8 } = data;
+        
+        // Validar código de 6 dígitos
         if (!roomCode || roomCode.length !== 6 || !/^\d+$/.test(roomCode)) {
+            console.log('❌ Código inválido:', roomCode);
             socket.emit('error-message', 'La contraseña debe ser exactamente 6 dígitos');
             return;
         }
         
+        // Verificar si la sala ya existe
         if (rooms.has(roomCode)) {
+            console.log('❌ Sala ya existe:', roomCode);
             socket.emit('error-message', 'Ya existe una sala con ese código');
             return;
         }
         
-        const room = new GameRoom(roomCode, playerName, socket.id, maxPlayers);
-        rooms.set(roomCode, room);
-        socket.join(roomCode);
-        
-        socket.emit('room-created', {
-            roomCode,
-            playerId: socket.id,
-            players: room.getPlayers()
-        });
-        
-        console.log(`✅ Sala ${roomCode} creada. Total salas: ${rooms.size}`);
+        try {
+            // Crear nueva sala
+            console.log('✅ Creando sala:', roomCode);
+            const room = new GameRoom(roomCode, playerName, socket.id, maxPlayers);
+            rooms.set(roomCode, room);
+            
+            // Unir al socket a la sala
+            socket.join(roomCode);
+            console.log(`✅ Socket ${socket.id} unido a sala ${roomCode}`);
+            
+            // Obtener lista de jugadores
+            const playersList = room.getPlayers();
+            console.log('👥 Jugadores en sala:', playersList);
+            
+            // Enviar confirmación al cliente
+            socket.emit('room-created', {
+                roomCode,
+                playerId: socket.id,
+                players: playersList
+            });
+            
+            console.log(`✅ Sala ${roomCode} creada exitosamente`);
+            
+        } catch (error) {
+            console.error('❌ Error al crear sala:', error);
+            socket.emit('error-message', 'Error interno al crear la sala');
+        }
     });
 
     // ===== UNIRSE A SALA =====
-    socket.on('join-room', ({ playerName, roomCode }) => {
-        console.log(`🔑 Intentando unirse: ${playerName} a sala ${roomCode}`);
+    socket.on('join-room', (data) => {
+        console.log('🔑 Evento join-room recibido:', data);
+        
+        const { playerName, roomCode } = data;
         
         if (!roomCode || roomCode.length !== 6) {
             socket.emit('error-message', 'El código debe tener 6 dígitos');
@@ -106,20 +115,30 @@ io.on('connection', (socket) => {
             return;
         }
         
-        room.addPlayer(socket.id, playerName, false);
-        socket.join(roomCode);
-        
-        io.to(roomCode).emit('player-joined', {
-            players: room.getPlayers()
-        });
-        
-        socket.emit('room-joined', {
-            roomCode,
-            playerId: socket.id,
-            players: room.getPlayers()
-        });
-        
-        console.log(`✅ ${playerName} se unió a sala ${roomCode}. Jugadores: ${room.players.length}/8`);
+        try {
+            room.addPlayer(socket.id, playerName, false);
+            socket.join(roomCode);
+            
+            const playersList = room.getPlayers();
+            
+            // Notificar a todos
+            io.to(roomCode).emit('player-joined', {
+                players: playersList
+            });
+            
+            // Confirmar al jugador
+            socket.emit('room-joined', {
+                roomCode,
+                playerId: socket.id,
+                players: playersList
+            });
+            
+            console.log(`✅ ${playerName} se unió a sala ${roomCode}`);
+            
+        } catch (error) {
+            console.error('❌ Error al unirse:', error);
+            socket.emit('error-message', 'Error al unirse a la sala');
+        }
     });
 
     // ===== INICIAR JUEGO =====
@@ -141,23 +160,29 @@ io.on('connection', (socket) => {
             return;
         }
         
-        const game = new UnoGame(room.players.length);
-        room.gameStarted = true;
-        room.game = game;
-        
-        room.players.forEach((player, index) => {
-            game.players[index].name = player.name;
-            game.players[index].id = player.id;
-        });
-        
-        room.players.forEach((player, index) => {
-            io.to(player.id).emit('game-starting', {
-                playerIndex: index,
-                gameState: game.getPublicState(index)
+        try {
+            const game = new UnoGame(room.players.length);
+            room.gameStarted = true;
+            room.game = game;
+            
+            room.players.forEach((player, index) => {
+                game.players[index].name = player.name;
+                game.players[index].id = player.id;
             });
-        });
-        
-        console.log(`🎮 Juego iniciado en sala ${roomCode}`);
+            
+            room.players.forEach((player, index) => {
+                io.to(player.id).emit('game-starting', {
+                    playerIndex: index,
+                    gameState: game.getPublicState(index)
+                });
+            });
+            
+            console.log(`🎮 Juego iniciado en sala ${roomCode}`);
+            
+        } catch (error) {
+            console.error('❌ Error al iniciar juego:', error);
+            socket.emit('error-message', 'Error al iniciar el juego');
+        }
     });
 
     // ===== JUGAR CARTA =====
@@ -255,7 +280,7 @@ io.on('connection', (socket) => {
 
     // ===== DESCONEXIÓN =====
     socket.on('disconnect', () => {
-        console.log(`🔴 Jugador desconectado: ${socket.id}`);
+        console.log(`🔴 Cliente desconectado: ${socket.id}`);
         
         rooms.forEach((room, roomCode) => {
             if (room.hasPlayer(socket.id)) {
@@ -279,5 +304,4 @@ server.listen(PORT, () => {
     console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
     console.log(`📊 Monitoreo: http://localhost:${PORT}/api/rooms`);
     console.log(`💚 Health check: http://localhost:${PORT}/health`);
-    console.log(`🏠 Ruta principal: http://localhost:${PORT}/`);
 });
